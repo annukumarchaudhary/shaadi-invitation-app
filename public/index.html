@@ -5,13 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Didi ki Shaadi - Invitation Tracker</title>
     <link rel="stylesheet" href="/style.css">
+    <style>
+        /* Security Backdrop view when page initialization triggers */
+        #loginGate {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff9f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .login-card {
+            background: white;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            border-top: 6px solid #800020;
+        }
+        .login-card h2 { color: #800020; margin-bottom: 15px; }
+        .login-card input {
+            width: 100%; padding: 12px;
+            border: 2px solid #ccc; border-radius: 6px;
+            font-size: 1rem; margin-bottom: 15px; text-align: center;
+        }
+        .login-card input:focus { outline: none; border-color: #800020; }
+        /* Main application body initially hidden until verification passes */
+        #appContent { display: none; }
+    </style>
 </head>
 <body>
-    <div class="container">
+
+    <div id="loginGate">
+        <div class="login-card">
+            <h2>🔒 Security Check</h2>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">Please enter the password to access Invitation Portal.</p>
+            <input type="password" id="gatePassword" placeholder="Enter Portal Password..." autocomplete="off">
+            <button id="btnGateLogin" class="btn btn-submit" style="width: 100%;">Verify & Open Portal</button>
+            <div id="gateError" style="color: red; font-weight: bold; margin-top: 10px; font-size: 0.9rem;"></div>
+        </div>
+    </div>
+
+    <div id="appContent" class="container">
         <h1>✨ Didi Ki Shaadi - Invitation Tracker ✨</h1>
         
-        <div style="text-align:right; margin-bottom: 20px;">
-            <button id="manageBtn" class="btn btn-manage">Manage</button>
+        <div style="text-align:right; margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="logoutBtn" class="btn" style="background: #6c757d; color: white; padding: 8px 16px;">🔒 Logout</button>
+            <button id="manageBtn" class="btn btn-manage">Manage Panel</button>
         </div>
         
         <div class="card">

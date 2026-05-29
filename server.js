@@ -1,3 +1,4 @@
+require('dotenv').config(); // ✨ Loaded dotenv engine config safely
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -7,16 +8,16 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shaadi-app';
 
+// MongoDB Atlas Cloud Connection Setup
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .then(() => console.log('MongoDB Cloud connected successfully ✅'))
+  .catch(err => console.error('MongoDB connection error ❌:', err));
 
-// ✨ FIXED Database Schema: Added guests count parameter with explicit default value to 1
 const relativeSchema = new mongoose.Schema({
   name: { type: String, required: true },
   address: { type: String, required: true }, 
   phone: { type: String, default: '' }, 
-  guests: { type: Number, default: 1 }, // Default configuration ensures legacy 220 records auto-assign to 1
+  guests: { type: Number, default: 1 }, 
   receivedAt: { type: Date, default: Date.now }
 });
 const Relative = mongoose.model('Relative', relativeSchema);
@@ -82,8 +83,8 @@ app.get('/rsvps', async (req, res) => {
 			id: r._id,
 			name: r.name,
 			attending: r.address, 
-			guests: r.guests || 1, // Correct parameter synchronization context maps back to table rows     
-			message: r.phone || 'N/A', // Shifted phone number inside message field matrix
+			guests: r.guests || 1,     
+			message: r.phone || 'N/A', 
 			receivedAt: r.receivedAt ? new Date(r.receivedAt).toLocaleString('en-IN') : 'N/A' 
 		}));
 		res.json(formatted);
@@ -105,11 +106,10 @@ app.delete('/rsvp/:id', adminAuth, async (req, res) => {
 app.put('/rsvp/:id', adminAuth, async (req, res) => {
 	try {
 		const { name, attending, guests, message } = req.body || {};
-		
 		const updates = {};
 		if (name !== undefined) updates.name = name;
 		if (attending !== undefined) updates.address = attending; 
-		if (guests !== undefined) updates.guests = parseInt(guests) || 1; // Handled guests update context modification layer
+		if (guests !== undefined) updates.guests = parseInt(guests) || 1; 
 		if (message !== undefined) updates.phone = (message === 'N/A' ? '' : message); 
 
 		const entry = await Relative.findByIdAndUpdate(req.params.id, updates, { new: true });
@@ -136,6 +136,6 @@ app.use((req, res) => {
 
 mongoose.connection.once('open', () => {
 	app.listen(PORT, () => {
-		console.log(`Server listening on http://localhost:${PORT}`);
+		console.log(`Server listening on port ${PORT}`);
 	});
 });
