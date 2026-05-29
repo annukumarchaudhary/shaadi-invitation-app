@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Didi ki Shaadi - Invitation Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>✨ Didi Ki Shaadi - Invitation Tracker ✨</h1>
+        
+        <div style="text-align:right; margin-bottom: 20px;">
+            <button id="manageBtn" class="btn btn-manage">Manage</button>
+        </div>
+        
+        <div class="card">
+            <h2>Add New Relative</h2>
+            <form id="relativeForm">
+                <div class="form-group">
+                    <label for="name">Full Name:</label>
+                    <input type="text" id="name" required list="nameSuggestions" autocomplete="off">
+                    <datalist id="nameSuggestions"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Address (Village/City):</label>
+                    <input type="text" id="address" required list="addressSuggestions" autocomplete="off">
+                    <datalist id="addressSuggestions"></datalist>
+                    
+                    <div style="margin-top: 8px; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="lockAddress" style="width: auto; cursor: pointer;">
+                        <label for="lockAddress" style="display: inline; font-size: 0.9rem; color: #800020; cursor: pointer; user-select: none;">
+                            🔒 Lock this Address for bulk entry (Gao lock karein)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="guests">Number of Guests (Kitne log aayenge):</label>
+                    <select id="guests" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; background: white; cursor: pointer;">
+                        <option value="1" selected>1 Person (Default)</option>
+                        <option value="2">2 People</option>
+                        <option value="3">3 People</option>
+                        <option value="4">4 People</option>
+                        <option value="5">5 People</option>
+                        <option value="6">6 People</option>
+                        <option value="7">7 People</option>
+                        <option value="8">8 People</option>
+                        <option value="9">9 People</option>
+                        <option value="10">10 People</option>
+                        <option value="11">11 People</option>
+                        <option value="12">12 People</option>
+                        <option value="13">13 People</option>
+                        <option value="14">14 People</option>
+                        <option value="15">15 People</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number (Optional):</label>
+                    <input type="tel" id="phone" list="phoneSuggestions" autocomplete="off">
+                    <datalist id="phoneSuggestions"></datalist>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-submit">Submit Entry</button>
+                    <button type="button" class="btn btn-clear" id="clearBtn">Clear Form</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card search-card">
+            <h2>🔍 Find People</h2>
+            <div class="search-box" style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                <input type="text" id="searchLocation" placeholder="Type name or address to filter instantly..." style="flex: 1; border: 2px solid #800020; padding: 12px; border-radius: 6px; font-size: 1rem;">
+            </div>
+            
+            <div id="exportArea" style="display: none; text-align: right; margin-top: 15px;">
+                <button id="exportPdfBtn" class="btn" style="background-color: #28a745; color: white; padding: 8px 16px;">📄 Export to PDF</button>
+            </div>
+            
+            <div id="searchResults" class="results-container">
+                </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

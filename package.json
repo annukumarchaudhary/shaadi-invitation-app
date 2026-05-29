@@ -1,0 +1,16 @@
+{
+	"name": "shaadi-invitation-app",
+	"version": "1.0.0",
+	"description": "Simple wedding invitation app",
+	"main": "server.js",
+	"scripts": {
+		"start": "node server.js"
+	},
+	"author": "",
+	"license": "MIT",
+	"dependencies": {
+		"body-parser": "^2.2.2",
+		"express": "^5.2.1",
+		"mongoose": "^9.6.2"
+	}
+}

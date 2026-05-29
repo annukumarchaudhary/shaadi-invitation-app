@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Manage Invitation Entries</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:20px;background-color:#fff9f5;color:#333;}
+    table{border-collapse:collapse;width:100%;margin-top:15px;}
+    th,td{border:1px solid #ddd;padding:10px;text-align:left;}
+    th{background:#800020;color:white;}
+    tr:nth-child(even){background-color: #f9f9f9;}
+    .controls{display:flex;gap:8px;}
+    .top{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+    input[type="password"], input[type="text"], select{padding:8px;border:1px solid #ccc;border-radius:4px;font-size:14px;box-sizing:border-box;}
+    button{padding:8px 14px;background:#333;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:bold;}
+    button:hover{opacity:0.9;}
+    #clearAll{background:#800020;}
+    .delete{background:#d9534f;padding:4px 8px;font-size:12px;}
+    #exportAdminPdf{background:#28a745;}
+    #sortDirBtn{background:#007bff;}
+    
+    /* ✨ Master Edit Mode Buttons */
+    #editModeBtn { background-color: #ffc107; color: #333; }
+    #editModeBtn.editing-active { background-color: #28a745; color: white; }
+    #cancelEditBtn { background-color: #6c757d; color: white; display: none; }
+    
+    /* Inline Inputs Design for Grid Editing */
+    .inline-edit-input {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #800020;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    #adminSearchInput { border: 2px solid #800020; background-color: #fff; width: 250px; }
+    #adminSearchInput:focus { outline: none; box-shadow: 0 0 5px rgba(128, 0, 32, 0.4); }
+  </style>
+</head>
+<body>
+  <h1>Admin — Manage Entries</h1>
+  <div class="top">
+    <label>Admin password: <input id="adminPw" type="password" /></label>
+    <button id="savePw">Save</button>
+    <button id="load">Reload</button>
+    
+    <label style="font-weight:bold;margin-left:10px;">Sort By: 
+  <select id="sortBySelect">
+    <option value="name">Name</option>
+    <option value="address">Address</option>
+    <option value="date" selected>Received Date</option>
+  </select>
+</label>
+<button id="sortDirBtn" data-dir="desc">Order: Descending (Z-A) ↓</button>
+
+    <div style="display: flex; align-items: center; gap: 6px; margin-left: 10px;">
+      <span style="font-weight: bold;">🔍 Live Find:</span>
+      <input type="text" id="adminSearchInput" placeholder="Type name or address...">
+    </div>
+
+    <button id="editModeBtn">✏️ Bulk Edit Mode</button>
+    <button id="cancelEditBtn">❌ Cancel</button>
+
+    <button id="exportAdminPdf">📄 Export to PDF</button>
+    <button id="clearAll">Clear All Entries</button>
+  </div>
+  
+  <div id="status" style="font-weight:bold;margin-bottom:10px;"></div>
+  
+  <table id="list">
+    <thead>
+      <tr>
+        <th style="width: 35%;">Name</th>
+        <th style="width: 30%;">Address</th>
+        <th style="width: 12%;">Guests Count</th>
+        <th style="width: 15%;">Phone Number</th>
+        <th style="width: 8%;">Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
