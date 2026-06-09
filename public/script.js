@@ -61,19 +61,22 @@ async function fetchSuggestionsData() {
     }
 }
 
-// ✨ FIXED: Now showing Name along with Address inside datalist options dropdown helper
+// ✨ FIXED: Clean structure layout using label attribute for layout formatting
 function updateDatalists() {
     const nameList = document.getElementById('nameSuggestions');
     const addressList = document.getElementById('addressSuggestions');
     const phoneList = document.getElementById('phoneSuggestions');
 
-    // Name input suggestions me ab Naam ke sath Address bhi bracket me dikhega
+    // value me main name rahega (bada dikhega), aur label me sirf address (niche chota dikhega)
     nameList.innerHTML = databaseCache
-        .map(p => `<option value="${p.name}" data-address="${p.address}">${p.name} (${p.address})</option>`)
+        .map(p => `<option value="${p.name}" label="📍 ${p.address}"></option>`)
         .join('');
 
-    addressList.innerHTML = [...new Set(databaseCache.map(p => p.address))].map(a => `<option value="${a}">`).join('');
-    phoneList.innerHTML = [...new Set(databaseCache.filter(p => p.phone).map(p => p.phone))].map(p => `<option value="${p}">`).join('');
+    addressList.innerHTML = [...new Set(databaseCache.map(p => p.address))].map(a => `<option value="${a}"></option>`)
+        .join('');
+        
+    phoneList.innerHTML = [...new Set(databaseCache.filter(p => p.phone).map(p => p.phone))].map(p => `<option value="${p}"></option>`)
+        .join('');
 }
 
 document.getElementById('clearBtn').addEventListener('click', () => {
