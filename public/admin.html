@@ -20,12 +20,10 @@
     #exportAdminPdf{background:#28a745;}
     #sortDirBtn{background:#007bff;}
     
-    /* ✨ Master Edit Mode Buttons */
     #editModeBtn { background-color: #ffc107; color: #333; }
     #editModeBtn.editing-active { background-color: #28a745; color: white; }
     #cancelEditBtn { background-color: #6c757d; color: white; display: none; }
     
-    /* Inline Inputs Design for Grid Editing */
     .inline-edit-input {
       width: 100%;
       padding: 6px;
@@ -34,7 +32,8 @@
       font-size: 13px;
     }
     
-    #adminSearchInput { border: 2px solid #800020; background-color: #fff; width: 250px; }
+    /* ✨ Expanded width for better hint visibility */
+    #adminSearchInput { border: 2px solid #800020; background-color: #fff; width: 320px; }
     #adminSearchInput:focus { outline: none; box-shadow: 0 0 5px rgba(128, 0, 32, 0.4); }
   </style>
 </head>
@@ -46,17 +45,18 @@
     <button id="load">Reload</button>
     
     <label style="font-weight:bold;margin-left:10px;">Sort By: 
-  <select id="sortBySelect">
-    <option value="name">Name</option>
-    <option value="address">Address</option>
-    <option value="date" selected>Received Date</option>
-  </select>
-</label>
-<button id="sortDirBtn" data-dir="desc">Order: Descending (Z-A) ↓</button>
+      <select id="sortBySelect">
+        <option value="name">Name</option>
+        <option value="address">Address</option>
+        <option value="date" selected>Received Date</option>
+      </select>
+    </label>
+    <button id="sortDirBtn" data-dir="desc">Order: Descending (Z-A) ↓</button>
 
+    <!-- ✨ Smart Multi-Attribute Live Find Input -->
     <div style="display: flex; align-items: center; gap: 6px; margin-left: 10px;">
       <span style="font-weight: bold;">🔍 Live Find:</span>
-      <input type="text" id="adminSearchInput" placeholder="Type name or address...">
+      <input type="text" id="adminSearchInput" placeholder="Try 'advocate mohania' or 'singh bhabhua'...">
     </div>
 
     <button id="editModeBtn">✏️ Bulk Edit Mode</button>

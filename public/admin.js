@@ -41,9 +41,9 @@ function applySortAndRender() {
 
   const sortBy = document.getElementById('sortBySelect').value;
   const sortDir = document.getElementById('sortDirBtn').getAttribute('data-dir'); 
-  const searchTerm = (document.getElementById('adminSearchInput').value || '').trim().toLowerCase(); 
+  const searchInputVal = (document.getElementById('adminSearchInput').value || '').trim().toLowerCase(); 
 
-  // Sort mechanism logic
+  // Sort mechanism logic[cite: 7]
   currentData.sort((a, b) => {
     let fieldA = '', fieldB = '';
     if (sortBy === 'name') {
@@ -62,11 +62,17 @@ function applySortAndRender() {
     return 0;
   });
 
-  // Filter criteria execution context
+  // ✨ UPGRADED: Smart Multi-Attribute Filter Engine Context[cite: 7]
+  // Spaces se saare words ko break karke array banata hai (Jaise: ["advocate", "mohania"])
+  const searchTokens = searchInputVal.split(/\s+/).filter(token => token.length > 0);
+
   const filteredData = currentData.filter(r => {
-    const nameText = (r.name || '').toString().toLowerCase();
-    const addressText = (r.attending || '').toString().toLowerCase();
-    return !searchTerm || nameText.includes(searchTerm) || addressText.includes(searchTerm);
+    if (searchTokens.length === 0) return true; // Agar search box khali hai toh sab dikhao
+    
+    const combinedTargetText = `${r.name || ''} ${r.attending || ''}`.toLowerCase();
+    
+    // Check karta hai ki kya SAARE tokens text ke andar match ho rahe hain (AND Condition)
+    return searchTokens.every(token => combinedTargetText.includes(token));
   });
 
   const totalMasterGuests = currentData.reduce((sum, r) => sum + (parseInt(r.guests) || 1), 0);
@@ -106,8 +112,8 @@ function applySortAndRender() {
     tbody.appendChild(tr);
   });
   
-  // Dynamic Counter Status Layout
-  if (searchTerm) {
+  // Dynamic Counter Status Layout[cite: 7]
+  if (searchTokens.length > 0) {
     setStatus(`Filtered: ${filteredData.length} of ${currentData.length} Entries | Selected Guests: ${totalFilteredGuests}👥 (Total Database Guests: ${totalMasterGuests}👥)`);
   } else {
     setStatus(`Loaded ${currentData.length} of ${currentData.length} Entries | Total Guests: ${totalMasterGuests}👥`);
