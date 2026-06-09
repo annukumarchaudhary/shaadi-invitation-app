@@ -1,24 +1,20 @@
 let databaseCache = [];
-const FIXED_PORTAL_PASSWORD = "AnnuAdmin@123"; // ✨ Aapka set kiya hua Portal password check
+const FIXED_PORTAL_PASSWORD = "AnnuAdmin@123"; 
 
-// ✨ Initialization authentication verification hook sequence
 window.addEventListener('DOMContentLoaded', async () => {
     checkPortalSession();
 });
 
-// Verification block layout execution logic
 function checkPortalSession() {
     const sessionAuth = sessionStorage.getItem('portalVerified');
     const loginGate = document.getElementById('loginGate');
     const appContent = document.getElementById('appContent');
 
     if (sessionAuth === 'true') {
-        // If already validated, remove gate sheet and load database collection context
         loginGate.style.display = 'none';
         appContent.style.display = 'block';
         initializeDashboard();
     } else {
-        // If unauthenticated, freeze viewport inside gate form
         loginGate.style.display = 'flex';
         appContent.style.display = 'none';
         setupGateListeners();
@@ -30,12 +26,11 @@ function setupGateListeners() {
     const passwordInput = document.getElementById('gatePassword');
     const errorDiv = document.getElementById('gateError');
 
-    // Trigger on verification click handler
     loginBtn.onclick = () => {
         const inputVal = passwordInput.value.trim();
         if (inputVal === FIXED_PORTAL_PASSWORD) {
             sessionStorage.setItem('portalVerified', 'true');
-            sessionStorage.setItem('adminPw', inputVal); // Direct synchronization context with admin panel session memory
+            sessionStorage.setItem('adminPw', inputVal); 
             document.getElementById('loginGate').style.display = 'none';
             document.getElementById('appContent').style.display = 'block';
             initializeDashboard();
@@ -46,13 +41,11 @@ function setupGateListeners() {
         }
     };
 
-    // Support enter key execution inside password input field container element
     passwordInput.onkeydown = (e) => {
         if (e.key === 'Enter') loginBtn.click();
     };
 }
 
-// Global invocation setup triggers once token passes authorization validation pipeline
 async function initializeDashboard() {
     await fetchSuggestionsData();
     renderLiveSearch(); 
@@ -68,12 +61,17 @@ async function fetchSuggestionsData() {
     }
 }
 
+// ✨ FIXED: Now showing Name along with Address inside datalist options dropdown helper
 function updateDatalists() {
     const nameList = document.getElementById('nameSuggestions');
     const addressList = document.getElementById('addressSuggestions');
     const phoneList = document.getElementById('phoneSuggestions');
 
-    nameList.innerHTML = [...new Set(databaseCache.map(p => p.name))].map(n => `<option value="${n}">`).join('');
+    // Name input suggestions me ab Naam ke sath Address bhi bracket me dikhega
+    nameList.innerHTML = databaseCache
+        .map(p => `<option value="${p.name}" data-address="${p.address}">${p.name} (${p.address})</option>`)
+        .join('');
+
     addressList.innerHTML = [...new Set(databaseCache.map(p => p.address))].map(a => `<option value="${a}">`).join('');
     phoneList.innerHTML = [...new Set(databaseCache.filter(p => p.phone).map(p => p.phone))].map(p => `<option value="${p}">`).join('');
 }
@@ -168,7 +166,6 @@ function renderLiveSearch() {
 
 document.getElementById('searchLocation').addEventListener('input', renderLiveSearch);
 
-// Export PDF directly to stream
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 if (exportPdfBtn) {
     exportPdfBtn.addEventListener('click', () => {
@@ -245,14 +242,12 @@ if (exportPdfBtn) {
     });
 }
 
-// Logout session reset configuration handler button interaction 
 document.getElementById('logoutBtn').addEventListener('click', () => {
     sessionStorage.removeItem('portalVerified');
     sessionStorage.removeItem('adminPw');
-    window.location.reload(); // Refresh viewport layout state to close active hooks
+    window.location.reload(); 
 });
 
-// Manage button routing pipeline handler
 document.getElementById('manageBtn').addEventListener('click', () => {
     window.location.href = '/admin.html';
 });
