@@ -1,6 +1,6 @@
 let currentData = []; 
 let isEditingMode = false; 
-let selectedVillages = new Set(); // Tracks currently checked villages matrix
+let selectedVillages = new Set(); 
 
 async function api(path, opts={}){
   const pw = sessionStorage.getItem('adminPw') || '';
@@ -26,7 +26,6 @@ async function load(){
     setStatus('Loading...');
     currentData = await api('/rsvps'); 
     
-    // Generate dynamic checkboxes based on legacy and live entries stream
     renderVillageCheckboxes();
     applySortAndRender(); 
   }catch(err){
@@ -34,7 +33,6 @@ async function load(){
   }
 }
 
-// ✨ NEW: Dynamic creation engine for unique village checkbox layout matrices
 function renderVillageCheckboxes() {
   const gridContainer = document.getElementById('villageFilterGrid');
   if (!currentData || currentData.length === 0) {
@@ -42,7 +40,6 @@ function renderVillageCheckboxes() {
     return;
   }
 
-  // Extract clean unique address records and sort them alphabetically (A-Z)
   const uniqueAddresses = [...new Set(currentData.map(r => (r.attending || '').trim()))]
     .filter(addr => addr.length > 0)
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
@@ -58,7 +55,6 @@ function renderVillageCheckboxes() {
       <span>${escapeHtml(addr)}</span>
     `;
 
-    // Attach real-time filter toggle sequence mapping configuration
     label.querySelector('input').addEventListener('change', (e) => {
       const lowerAddr = e.target.value.toLowerCase();
       if (e.target.checked) {
@@ -84,7 +80,6 @@ function applySortAndRender() {
   const sortDir = document.getElementById('sortDirBtn').getAttribute('data-dir'); 
   const searchInputVal = (document.getElementById('adminSearchInput').value || '').trim().toLowerCase(); 
 
-  // Sort mechanism logic
   currentData.sort((a, b) => {
     let fieldA = '', fieldB = '';
     if (sortBy === 'name') {
@@ -104,16 +99,13 @@ function applySortAndRender() {
 
   const searchTokens = searchInputVal.split(/\s+/).filter(token => token.length > 0);
 
-  // ✨ COMPREHENSIVE INTERSECTION: Filters via selected checkboxes AND space-separated strings
   const filteredData = currentData.filter(r => {
     const rowAddressLower = (r.attending || '').trim().toLowerCase();
     
-    // 1. Checkbox validation loop layer
     if (selectedVillages.size > 0 && !selectedVillages.has(rowAddressLower)) {
       return false;
     }
     
-    // 2. Space separated string tokens validation layer
     if (searchTokens.length > 0) {
       const combinedTargetText = `${r.name || ''} ${r.attending || ''}`.toLowerCase();
       return searchTokens.every(token => combinedTargetText.includes(token));
@@ -132,6 +124,7 @@ function applySortAndRender() {
     const tr = document.createElement('tr');
     tr.setAttribute('data-row-id', r.id); 
     
+    // ✨ FIXED INLINE ONCLICK HANDLERS: Directly triggers absolute execution bypassing delegation paths
     if (isEditingMode) {
       let optionsHtml = '';
       for (let i = 1; i <= 15; i++) {
@@ -145,7 +138,7 @@ function applySortAndRender() {
           <select class="inline-edit-input edit-guests">${optionsHtml}</select>
         </td>
         <td><input type="text" class="inline-edit-input edit-phone" value="${r.message === 'N/A' ? '' : escapeHtml(r.message)}"></td>
-        <td class="controls"><button data-id="${r.id}" class="delete">Delete</button></td>
+        <td class="controls"><button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button></td>
       `;
     } else {
       tr.innerHTML = `
@@ -153,7 +146,7 @@ function applySortAndRender() {
         <td>${escapeHtml(r.attending)}</td>
         <td><strong>${r.guests || 1}</strong></td>
         <td>${escapeHtml(r.message)}</td>
-        <td class="controls"><button data-id="${r.id}" class="delete">Delete</button></td>
+        <td class="controls"><button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button></td>
       `;
     }
     tbody.appendChild(tr);
@@ -165,6 +158,23 @@ function applySortAndRender() {
     setStatus(`Loaded ${currentData.length} of ${currentData.length} Entries | Total Guests: ${totalMasterGuests}👥`);
   }
 }
+
+// ✨ NEW MASTER EXPLICIT FUNCTION: Executed on absolute button interaction sequence
+async function deleteSingleEntry(id) {
+  if (!id) return;
+  if (!confirm('Kya aap is entry ko permanently delete karna chahte hain?')) return;
+  
+  try {
+    setStatus('Deleting...');
+    await api('/rsvp/' + id, { method: 'DELETE' });
+    await load();
+  } catch(err) {
+    alert('Error deleting data: ' + err.message);
+    setStatus('Error: ' + err.message);
+  }
+}
+// Expose the global scope function reference context to window container layer
+window.deleteSingleEntry = deleteSingleEntry;
 
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
@@ -244,7 +254,6 @@ document.getElementById('cancelEditBtn').addEventListener('click', () => {
   applySortAndRender();
 });
 
-// Master Reset Action for checkboxes triggers array clearing
 document.getElementById('clearVillageSelection').addEventListener('click', () => {
   selectedVillages.clear();
   const checkboxes = document.querySelectorAll('#villageFilterGrid input[type="checkbox"]');
@@ -307,7 +316,6 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
         totalPdfGuestsCount += parseInt(row.children[2].textContent) || 1;
     });
     
-    // Create smart localized string representing active chune huye villages context configuration
     let activeGaoText = "All Villages Master List";
     if (selectedVillages.size > 0) {
       activeGaoText = "Filtered Villages: " + [...selectedVillages].map(g => g.toUpperCase()).join(', ');
@@ -330,7 +338,7 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
         </head>
         <body>
             <h1>✨ Didi Ki Shaadi - Master Invitation List ✨</h1>
-            <p class="meta">Generated from Admin Panel | <strong>Target Map:</strong> ${activeGaoText}<br>Total Card Entries: <strong>${rows.length}</strong> | Total Guests Headcount: <span style="color: #800020; font-size: 15px;"><strong>${totalPdfGuestsCount} 👥</strong></span></p>
+            <p class="meta">Generated from Admin Panel | <strong>Target Map:</strong> ${activeGaoText}<br>Total Card Entries: <strong>${rows.length}</strong> | Total Guests Headcount: <span style="color: #800020; font-size: 16px;"><strong>${totalPdfGuestsCount} 👥</strong></span></p>
             <table class="guest-table">
                 <thead>
                     <tr>
