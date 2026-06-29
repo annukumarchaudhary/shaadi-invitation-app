@@ -1,6 +1,6 @@
 let currentData = []; 
-let isEditingMode = false; 
 let selectedVillages = new Set(); 
+let editingRowId = null; // Tracks which specific row is currently in targeted inline edit mode
 
 async function api(path, opts={}){
   const pw = sessionStorage.getItem('adminPw') || '';
@@ -19,10 +19,7 @@ function setStatus(msg){document.getElementById('status').textContent = msg}
 
 async function load(){
   try{
-    if(isEditingMode) {
-      isEditingMode = false;
-      toggleEditModeUI();
-    }
+    editingRowId = null; // Clear edit state on reload triggers
     setStatus('Loading...');
     currentData = await api('/rsvps'); 
     
@@ -125,34 +122,36 @@ function applySortAndRender() {
     tr.setAttribute('data-row-id', r.id); 
     
     const phoneVal = r.message === 'N/A' ? '' : r.message;
-    const phoneDisplay = r.message || 'N/A';
 
-    if (isEditingMode) {
+    // ✨ INTERACTION LOGIC: Checking if this specific row is triggered into targeted single edit mode
+    if (editingRowId === r.id) {
       let optionsHtml = '';
       for (let i = 1; i <= 15; i++) {
         optionsHtml += `<option value="${i}" ${parseInt(r.guests) === i ? 'selected' : ''}>${i}</option>`;
       }
       
       tr.innerHTML = `
-        <td><input type="text" class="inline-edit-input edit-name" value="${escapeHtml(r.name)}"></td>
-        <td><input type="text" class="inline-edit-input edit-address" value="${escapeHtml(r.attending)}"></td>
+        <td><input type="text" id="edit-name-${r.id}" class="inline-edit-input" value="${escapeHtml(r.name)}"></td>
+        <td><input type="text" id="edit-address-${r.id}" class="inline-edit-input" value="${escapeHtml(r.attending)}"></td>
         <td>
-          <select class="inline-edit-input edit-guests">${optionsHtml}</select>
+          <select id="edit-guests-${r.id}" class="inline-edit-input">${optionsHtml}</select>
         </td>
-        <td><input type="text" class="inline-edit-input edit-phone" value="${escapeHtml(phoneVal)}"></td>
-        <td class="controls"><button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button></td>
+        <td><input type="text" id="edit-phone-${r.id}" class="inline-edit-input" value="${escapeHtml(phoneVal)}"></td>
+        <td class="controls">
+          <button onclick="saveSingleRow('${r.id}')" class="save-btn">💾 Save</button>
+          <button onclick="cancelRowEdit()" class="cancel-btn">❌ Cancel</button>
+        </td>
       `;
     } else {
-      // ✨ Added explicit inline click event trigger context to manage isolated phone configurations
       tr.innerHTML = `
         <td><strong>${escapeHtml(r.name)}</strong></td>
         <td>${escapeHtml(r.attending)}</td>
         <td><strong>${r.guests || 1}</strong></td>
-        <td>
-          <span>${escapeHtml(phoneDisplay)}</span>
-          <button class="btn-edit-phone" onclick="editSinglePhone('${r.id}', '${escapeHtml(phoneVal)}')">✏️ Edit</button>
+        <td>${escapeHtml(r.message || 'N/A')}</td>
+        <td class="controls">
+          <button onclick="triggerRowEdit('${r.id}')" class="edit-btn">✏️ Edit</button>
+          <button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button>
         </td>
-        <td class="controls"><button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button></td>
       `;
     }
     tbody.appendChild(tr);
@@ -165,33 +164,57 @@ function applySortAndRender() {
   }
 }
 
-// ✨ NEW: Fast Isolated Single Row Phone Editor Engine
-async function editSinglePhone(id, currentPhone) {
+// ✨ NEW ARCHITECTURE FUNCTION: Triggers a single isolated row into inputs frame
+function triggerRowEdit(id) {
+  editingRowId = id;
+  applySortAndRender(); // Re-render to load input forms inside selected row boundary
+}
+
+// ✨ NEW ARCHITECTURE FUNCTION: Discards inline row modifications
+function cancelRowEdit() {
+  editingRowId = null;
+  applySortAndRender();
+}
+
+// ✨ NEW ARCHITECTURE FUNCTION: Securely patches comprehensive modifications into MongoDB Atlas cloud database
+async function saveSingleRow(id) {
   if (!id) return;
   
-  const newPhone = prompt(`Enter Phone Number for this relative:`, currentPhone);
+  const name = document.getElementById(`edit-name-${id}`).value.trim();
+  const address = document.getElementById(`edit-address-${id}`).value.trim();
+  const guests = document.getElementById(`edit-guests-${id}`).value;
+  const phone = document.getElementById(`edit-phone-${id}`).value.trim();
   
-  // Prompt cancel hone par bypass
-  if (newPhone === null) return; 
-  
-  const formattedPhone = newPhone.trim();
+  if (!name || !address) {
+    alert("Name aur Address field khali nahi chhod sakte!");
+    return;
+  }
   
   try {
-    setStatus('Updating phone number...');
-    // Maps payload parameters directly onto endpoint synchronization context layer
+    setStatus('Updating targeted relative records...');
     await api('/rsvp/' + id, {
       method: 'PUT',
-      body: JSON.stringify({ message: formattedPhone === '' ? 'N/A' : formattedPhone })
+      body: JSON.stringify({
+        name: name,
+        attending: address,
+        guests: parseInt(guests) || 1,
+        message: phone === '' ? 'N/A' : phone
+      })
     });
     
-    // Reload state to refresh memory cache layer
+    alert('🎉 Relative ka data safely update ho gaya!');
+    editingRowId = null; // Revert layout to standard mode
     await load();
   } catch (err) {
-    alert('Failed to update phone number: ' + err.message);
+    alert('Failed to update data records: ' + err.message);
     setStatus('Error: ' + err.message);
   }
 }
-window.editSinglePhone = editSinglePhone; // Attached global execution frame reference context
+
+// Expose single-row operations context seamlessly to window instance layer
+window.triggerRowEdit = triggerRowEdit;
+window.cancelRowEdit = cancelRowEdit;
+window.saveSingleRow = saveSingleRow;
 
 async function deleteSingleEntry(id) {
   if (!id) return;
@@ -209,88 +232,6 @@ async function deleteSingleEntry(id) {
 window.deleteSingleEntry = deleteSingleEntry;
 
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-
-function toggleEditModeUI() {
-  const editModeBtn = document.getElementById('editModeBtn');
-  const cancelEditBtn = document.getElementById('cancelEditBtn');
-  const searchInput = document.getElementById('adminSearchInput');
-  const sortSelect = document.getElementById('sortBySelect');
-
-  if (isEditingMode) {
-    editModeBtn.textContent = '💾 Save All Changes';
-    editModeBtn.classList.add('editing-active');
-    cancelEditBtn.style.display = 'inline-block';
-    searchInput.disabled = true;
-    sortSelect.disabled = true;
-  } else {
-    editModeBtn.textContent = '✏️ Bulk Edit Mode';
-    editModeBtn.classList.remove('editing-active');
-    cancelEditBtn.style.display = 'none';
-    searchInput.disabled = false;
-    sortSelect.disabled = false;
-  }
-}
-
-document.getElementById('editModeBtn').addEventListener('click', async () => {
-  if (!isEditingMode) {
-    isEditingMode = true;
-    toggleEditModeUI();
-    applySortAndRender();
-  } else {
-    const rows = document.querySelectorAll('#list tbody tr');
-    if (rows.length === 0) {
-      isEditingMode = false;
-      toggleEditModeUI();
-      applySortAndRender();
-      return;
-    }
-
-    if (!confirm('Kya aap saare inline changes ek sath database me save karna chahte hain?')) return;
-
-    try {
-      setStatus('Saving batch updates...');
-      const updatePromises = [];
-
-      rows.forEach(row => {
-        const id = row.getAttribute('data-row-id');
-        const name = row.querySelector('.edit-name') ? row.querySelector('.edit-name').value.trim() : null;
-        const address = row.querySelector('.edit-address') ? row.querySelector('.edit-address').value.trim() : null;
-        const guests = row.querySelector('.edit-guests') ? row.querySelector('.edit-guests').value : null;
-        const phone = row.querySelector('.edit-phone') ? row.querySelector('.edit-phone').value.trim() : null;
-
-        if (id) {
-          const updates = {};
-          if (name !== null) updates.name = name;
-          if (address !== null) updates.attending = address;
-          if (guests !== null) updates.guests = guests;
-          if (phone !== null) updates.message = phone === '' ? 'N/A' : phone;
-
-          const promise = api('/rsvp/' + id, {
-            method: 'PUT',
-            body: JSON.stringify(updates)
-          });
-          updatePromises.push(promise);
-        }
-      });
-
-      await Promise.all(updatePromises);
-      alert('🎉 Saare inline changes successfully update ho gaye hain!');
-      isEditingMode = false;
-      toggleEditModeUI();
-      await load();
-    } catch (err) {
-      alert('Bulk saving configuration failed: ' + err.message);
-      setStatus('Error: ' + err.message);
-    }
-  }
-});
-
-document.getElementById('cancelEditBtn').addEventListener('click', () => {
-  if (!confirm('Discard all unsaved inline adjustments? Data purana hi rahega.')) return;
-  isEditingMode = false;
-  toggleEditModeUI();
-  applySortAndRender();
-});
 
 document.getElementById('clearVillageSelection').addEventListener('click', () => {
   selectedVillages.clear();
@@ -344,8 +285,8 @@ document.getElementById('clearAll').addEventListener('click', async () => {
 
 document.getElementById('exportAdminPdf').addEventListener('click', () => {
     const rows = document.querySelectorAll('#list tbody tr');
-    if (rows.length === 0 || isEditingMode) {
-        alert(isEditingMode ? 'Pehle bulk edit mode ko save ya cancel karein!' : 'Export karne ke liye koi data nahi hai!');
+    if (rows.length === 0 || editingRowId !== null) {
+        alert(editingRowId !== null ? 'Pehle chal rahe edit mode ko save ya cancel karein!' : 'Export karne ke liye koi data nahi hai!');
         return;
     }
     
@@ -397,7 +338,7 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
                 <td><strong>${row.children[0].textContent}</strong></td>
                 <td>${row.children[1].textContent}</td>
                 <td><strong>${row.children[2].textContent}</strong></td>
-                <td>${row.children[3].textContent.replace('✏️ Edit', '')}</td>
+                <td>${row.children[3].textContent}</td>
             </tr>
         `;
     });
