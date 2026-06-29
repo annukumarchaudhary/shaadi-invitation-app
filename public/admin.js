@@ -124,7 +124,9 @@ function applySortAndRender() {
     const tr = document.createElement('tr');
     tr.setAttribute('data-row-id', r.id); 
     
-    // ✨ FIXED INLINE ONCLICK HANDLERS: Directly triggers absolute execution bypassing delegation paths
+    const phoneVal = r.message === 'N/A' ? '' : r.message;
+    const phoneDisplay = r.message || 'N/A';
+
     if (isEditingMode) {
       let optionsHtml = '';
       for (let i = 1; i <= 15; i++) {
@@ -137,15 +139,19 @@ function applySortAndRender() {
         <td>
           <select class="inline-edit-input edit-guests">${optionsHtml}</select>
         </td>
-        <td><input type="text" class="inline-edit-input edit-phone" value="${r.message === 'N/A' ? '' : escapeHtml(r.message)}"></td>
+        <td><input type="text" class="inline-edit-input edit-phone" value="${escapeHtml(phoneVal)}"></td>
         <td class="controls"><button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button></td>
       `;
     } else {
+      // ✨ Added explicit inline click event trigger context to manage isolated phone configurations
       tr.innerHTML = `
         <td><strong>${escapeHtml(r.name)}</strong></td>
         <td>${escapeHtml(r.attending)}</td>
         <td><strong>${r.guests || 1}</strong></td>
-        <td>${escapeHtml(r.message)}</td>
+        <td>
+          <span>${escapeHtml(phoneDisplay)}</span>
+          <button class="btn-edit-phone" onclick="editSinglePhone('${r.id}', '${escapeHtml(phoneVal)}')">✏️ Edit</button>
+        </td>
         <td class="controls"><button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button></td>
       `;
     }
@@ -159,21 +165,47 @@ function applySortAndRender() {
   }
 }
 
-// ✨ NEW MASTER EXPLICIT FUNCTION: Executed on absolute button interaction sequence
+// ✨ NEW: Fast Isolated Single Row Phone Editor Engine
+async function editSinglePhone(id, currentPhone) {
+  if (!id) return;
+  
+  const newPhone = prompt(`Enter Phone Number for this relative:`, currentPhone);
+  
+  // Prompt cancel hone par bypass
+  if (newPhone === null) return; 
+  
+  const formattedPhone = newPhone.trim();
+  
+  try {
+    setStatus('Updating phone number...');
+    // Maps payload parameters directly onto endpoint synchronization context layer
+    await api('/rsvp/' + id, {
+      method: 'PUT',
+      body: JSON.stringify({ message: formattedPhone === '' ? 'N/A' : formattedPhone })
+    });
+    
+    // Reload state to refresh memory cache layer
+    await load();
+  } catch (err) {
+    alert('Failed to update phone number: ' + err.message);
+    setStatus('Error: ' + err.message);
+  }
+}
+window.editSinglePhone = editSinglePhone; // Attached global execution frame reference context
+
 async function deleteSingleEntry(id) {
   if (!id) return;
   if (!confirm('Kya aap is entry ko permanently delete karna chahte hain?')) return;
   
   try {
     setStatus('Deleting...');
-    await api('/rsvp/' + id, { method: 'DELETE' });
+    await api('/rsvp/' + id, { method: 'DELETE' }); 
     await load();
   } catch(err) {
     alert('Error deleting data: ' + err.message);
     setStatus('Error: ' + err.message);
   }
 }
-// Expose the global scope function reference context to window container layer
 window.deleteSingleEntry = deleteSingleEntry;
 
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -221,15 +253,21 @@ document.getElementById('editModeBtn').addEventListener('click', async () => {
 
       rows.forEach(row => {
         const id = row.getAttribute('data-row-id');
-        const name = row.querySelector('.edit-name').value.trim();
-        const address = row.querySelector('.edit-address').value.trim();
-        const guests = row.querySelector('.edit-guests').value;
-        const phone = row.querySelector('.edit-phone').value.trim() || 'N/A';
+        const name = row.querySelector('.edit-name') ? row.querySelector('.edit-name').value.trim() : null;
+        const address = row.querySelector('.edit-address') ? row.querySelector('.edit-address').value.trim() : null;
+        const guests = row.querySelector('.edit-guests') ? row.querySelector('.edit-guests').value : null;
+        const phone = row.querySelector('.edit-phone') ? row.querySelector('.edit-phone').value.trim() : null;
 
-        if (name && address) {
+        if (id) {
+          const updates = {};
+          if (name !== null) updates.name = name;
+          if (address !== null) updates.attending = address;
+          if (guests !== null) updates.guests = guests;
+          if (phone !== null) updates.message = phone === '' ? 'N/A' : phone;
+
           const promise = api('/rsvp/' + id, {
             method: 'PUT',
-            body: JSON.stringify({ name, attending: address, guests: guests, message: phone })
+            body: JSON.stringify(updates)
           });
           updatePromises.push(promise);
         }
@@ -359,7 +397,7 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
                 <td><strong>${row.children[0].textContent}</strong></td>
                 <td>${row.children[1].textContent}</td>
                 <td><strong>${row.children[2].textContent}</strong></td>
-                <td>${row.children[3].textContent}</td>
+                <td>${row.children[3].textContent.replace('✏️ Edit', '')}</td>
             </tr>
         `;
     });

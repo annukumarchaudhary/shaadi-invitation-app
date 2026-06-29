@@ -1,133 +1,135 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Didi ki Shaadi - Invitation Tracker</title>
-    <link rel="stylesheet" href="/style.css">
-    <style>
-        /* Security Backdrop view when page initialization triggers */
-        #loginGate {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff9f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .login-card {
-            background: white;
-            padding: 35px;
-            border-radius: 12px;
-            box-shadow: 0 4px 25px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-            border-top: 6px solid #800020;
-        }
-        .login-card h2 { color: #800020; margin-bottom: 15px; }
-        .login-card input {
-            width: 100%; padding: 12px;
-            border: 2px solid #ccc; border-radius: 6px;
-            font-size: 1rem; margin-bottom: 15px; text-align: center;
-        }
-        .login-card input:focus { outline: none; border-color: #800020; }
-        /* Main application body initially hidden until verification passes */
-        #appContent { display: none; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Manage Invitation Entries</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:20px;background-color:#fff9f5;color:#333;}
+    table{border-collapse:collapse;width:100%;margin-top:15px;}
+    th,td{border:1px solid #ddd;padding:10px;text-align:left;}
+    th{background:#800020;color:white;}
+    tr:nth-child(even){background-color: #f9f9f9;}
+    .controls{display:flex;gap:8px;}
+    .top{display:flex;gap:12px;align-items:center;margin-bottom:15px;flex-wrap:wrap;}
+    input[type="password"], input[type="text"], select{padding:8px;border:1px solid #ccc;border-radius:4px;font-size:14px;box-sizing:border-box;}
+    button{padding:8px 14px;background:#333;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:bold;}
+    button:hover{opacity:0.9;}
+    #clearAll{background:#800020;}
+    .delete{background:#d9534f;padding:4px 8px;font-size:12px;}
+    #exportAdminPdf{background:#28a745;}
+    #sortDirBtn{background:#007bff;}
+    
+    #editModeBtn { background-color: #ffc107; color: #333; }
+    #editModeBtn.editing-active { background-color: #28a745; color: white; }
+    #cancelEditBtn { background-color: #6c757d; color: white; display: none; }
+    
+    .inline-edit-input {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #800020;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    #adminSearchInput { border: 2px solid #800020; background-color: #fff; width: 320px; }
+    #adminSearchInput:focus { outline: none; box-shadow: 0 0 5px rgba(128, 0, 32, 0.4); }
+
+    .village-filter-card {
+      background: #fff;
+      padding: 15px;
+      border: 2px solid #800020;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .village-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 5px;
+      border-top: 1px solid #eee;
+      margin-top: 10px;
+    }
+    .village-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .village-item input {
+      cursor: pointer;
+      accent-color: #800020;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ✨ Styling for the new single-row phone editor button */
+    .btn-edit-phone {
+      padding: 3px 6px;
+      background: #007bff;
+      color: white;
+      font-size: 11px;
+      border-radius: 3px;
+      margin-left: 8px;
+      font-weight: normal;
+    }
+  </style>
 </head>
 <body>
+  <h1>Admin — Manage Entries</h1>
+  <div class="top">
+    <label>Admin password: <input id="adminPw" type="password" /></label>
+    <button id="savePw">Save</button>
+    <button id="load">Reload</button>
+    
+    <label style="font-weight:bold;margin-left:10px;">Sort By: 
+      <select id="sortBySelect">
+        <option value="name">Name</option>
+        <option value="address">Address</option>
+        <option value="date" selected>Received Date</option>
+      </select>
+    </label>
+    <button id="sortDirBtn" data-dir="desc">Order: Descending (Z-A) ↓</button>
 
-    <div id="loginGate">
-        <div class="login-card">
-            <h2>🔒 Security Check</h2>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">Please enter the password to access Invitation Portal.</p>
-            <input type="password" id="gatePassword" placeholder="Enter Portal Password..." autocomplete="off">
-            <button id="btnGateLogin" class="btn btn-submit" style="width: 100%;">Verify & Open Portal</button>
-            <div id="gateError" style="color: red; font-weight: bold; margin-top: 10px; font-size: 0.9rem;"></div>
-        </div>
+    <div style="display: flex; align-items: center; gap: 6px; margin-left: 10px;">
+      <span style="font-weight: bold;">🔍 Live Find:</span>
+      <input type="text" id="adminSearchInput" placeholder="Try 'advocate mohania' or 'singh bhabhua'...">
     </div>
 
-    <div id="appContent" class="container">
-        <h1>✨ Didi Ki Shaadi - Invitation Tracker ✨</h1>
-        
-        <div style="text-align:right; margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-            <button id="logoutBtn" class="btn" style="background: #6c757d; color: white; padding: 8px 16px;">🔒 Logout</button>
-            <button id="manageBtn" class="btn btn-manage">Manage Panel</button>
-        </div>
-        
-        <div class="card">
-            <h2>Add New Relative</h2>
-            <form id="relativeForm">
-                <div class="form-group">
-                    <label for="name">Full Name:</label>
-                    <input type="text" id="name" required list="nameSuggestions" autocomplete="off">
-                    <datalist id="nameSuggestions"></datalist>
-                </div>
+    <button id="editModeBtn">✏️ Bulk Edit Mode</button>
+    <button id="cancelEditBtn">❌ Cancel</button>
 
-                <div class="form-group">
-                    <label for="address">Address (Village/City):</label>
-                    <input type="text" id="address" required list="addressSuggestions" autocomplete="off">
-                    <datalist id="addressSuggestions"></datalist>
-                    
-                    <div style="margin-top: 8px; display: flex; align-items: center; gap: 6px;">
-                        <input type="checkbox" id="lockAddress" style="width: auto; cursor: pointer;">
-                        <label for="lockAddress" style="display: inline; font-size: 0.9rem; color: #800020; cursor: pointer; user-select: none;">
-                            🔒 Lock this Address for bulk entry (Gao lock karein)
-                        </label>
-                    </div>
-                </div>
+    <button id="exportAdminPdf">📄 Export to PDF</button>
+    <button id="clearAll">Clear All Entries</button>
+  </div>
 
-                <div class="form-group">
-                    <label for="guests">Number of Guests (Kitne log aayenge):</label>
-                    <select id="guests" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; background: white; cursor: pointer;">
-                        <option value="1" selected>1 Person (Default)</option>
-                        <option value="2">2 People</option>
-                        <option value="3">3 People</option>
-                        <option value="4">4 People</option>
-                        <option value="5">5 People</option>
-                        <option value="6">6 People</option>
-                        <option value="7">7 People</option>
-                        <option value="8">8 People</option>
-                        <option value="9">9 People</option>
-                        <option value="10">10 People</option>
-                        <option value="11">11 People</option>
-                        <option value="12">12 People</option>
-                        <option value="13">13 People</option>
-                        <option value="14">14 People</option>
-                        <option value="15">15 People</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="phone">Phone Number (Optional):</label>
-                    <input type="tel" id="phone" list="phoneSuggestions" autocomplete="off">
-                    <datalist id="phoneSuggestions"></datalist>
-                </div>
-
-                <div class="btn-group">
-                    <button type="submit" class="btn btn-submit">Submit Entry</button>
-                    <button type="button" class="btn btn-clear" id="clearBtn">Clear Form</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="card search-card">
-            <h2>🔍 Find People</h2>
-            <div class="search-box" style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                <input type="text" id="searchLocation" placeholder="Type name or address to filter instantly..." style="flex: 1; border: 2px solid #800020; padding: 12px; border-radius: 6px; font-size: 1rem;">
-            </div>
-            
-            <div id="exportArea" style="display: none; text-align: right; margin-top: 15px;">
-                <button id="exportPdfBtn" class="btn" style="background-color: #28a745; color: white; padding: 8px 16px;">📄 Export to PDF</button>
-            </div>
-            
-            <div id="searchResults" class="results-container">
-                </div>
-        </div>
+  <div class="village-filter-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: bold; color: #800020; font-size: 15px;">📍 Filter by Village / Address (Chuninda gao ka data dekhein):</span>
+      <button id="clearVillageSelection" style="padding: 4px 10px; background: #6c757d; font-size: 12px;">Reset Selection</button>
     </div>
+    <div id="villageFilterGrid" class="village-grid"></div>
+  </div>
+  
+  <div id="status" style="font-weight:bold;margin-bottom:10px;"></div>
+  
+  <table id="list">
+    <thead>
+      <tr>
+        <th style="width: 32%;">Name</th>
+        <th style="width: 28%;">Address</th>
+        <th style="width: 12%;">Guests Count</th>
+        <th style="width: 20%;">Phone Number</th>
+        <th style="width: 8%;">Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <script src="/script.js"></script>
+  <script src="/admin.js"></script>
 </body>
 </html>
