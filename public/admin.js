@@ -1,7 +1,7 @@
 let currentData = []; 
 let isEditingMode = false; 
+let selectedVillages = new Set(); // Tracks currently checked villages matrix
 
-// Generic API network client helper
 async function api(path, opts={}){
   const pw = sessionStorage.getItem('adminPw') || '';
   const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
@@ -25,13 +25,54 @@ async function load(){
     }
     setStatus('Loading...');
     currentData = await api('/rsvps'); 
+    
+    // Generate dynamic checkboxes based on legacy and live entries stream
+    renderVillageCheckboxes();
     applySortAndRender(); 
   }catch(err){
     setStatus('Error: ' + err.message);
   }
 }
 
-// Memory sorting and conditional HTML grid rendering engine
+// ✨ NEW: Dynamic creation engine for unique village checkbox layout matrices
+function renderVillageCheckboxes() {
+  const gridContainer = document.getElementById('villageFilterGrid');
+  if (!currentData || currentData.length === 0) {
+    gridContainer.innerHTML = '<p style="color:#999; font-size:13px; margin:5px 0 0 0;">No locations found.</p>';
+    return;
+  }
+
+  // Extract clean unique address records and sort them alphabetically (A-Z)
+  const uniqueAddresses = [...new Set(currentData.map(r => (r.attending || '').trim()))]
+    .filter(addr => addr.length > 0)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+
+  gridContainer.innerHTML = '';
+  uniqueAddresses.forEach(addr => {
+    const label = document.createElement('label');
+    label.className = 'village-item';
+    
+    const isChecked = selectedVillages.has(addr.toLowerCase());
+    label.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(addr)}" ${isChecked ? 'checked' : ''}>
+      <span>${escapeHtml(addr)}</span>
+    `;
+
+    // Attach real-time filter toggle sequence mapping configuration
+    label.querySelector('input').addEventListener('change', (e) => {
+      const lowerAddr = e.target.value.toLowerCase();
+      if (e.target.checked) {
+        selectedVillages.add(lowerAddr);
+      } else {
+        selectedVillages.delete(lowerAddr);
+      }
+      applySortAndRender();
+    });
+
+    gridContainer.appendChild(label);
+  });
+}
+
 function applySortAndRender() {
   if (!currentData || currentData.length === 0) {
     document.querySelector('#list tbody').innerHTML = '';
@@ -43,7 +84,7 @@ function applySortAndRender() {
   const sortDir = document.getElementById('sortDirBtn').getAttribute('data-dir'); 
   const searchInputVal = (document.getElementById('adminSearchInput').value || '').trim().toLowerCase(); 
 
-  // Sort mechanism logic[cite: 7]
+  // Sort mechanism logic
   currentData.sort((a, b) => {
     let fieldA = '', fieldB = '';
     if (sortBy === 'name') {
@@ -56,23 +97,29 @@ function applySortAndRender() {
       fieldA = (a.id || '').toString(); 
       fieldB = (b.id || '').toString();
     }
-
     if (fieldA < fieldB) return sortDir === 'asc' ? -1 : 1;
     if (fieldA > fieldB) return sortDir === 'asc' ? 1 : -1;
     return 0;
   });
 
-  // ✨ UPGRADED: Smart Multi-Attribute Filter Engine Context[cite: 7]
-  // Spaces se saare words ko break karke array banata hai (Jaise: ["advocate", "mohania"])
   const searchTokens = searchInputVal.split(/\s+/).filter(token => token.length > 0);
 
+  // ✨ COMPREHENSIVE INTERSECTION: Filters via selected checkboxes AND space-separated strings
   const filteredData = currentData.filter(r => {
-    if (searchTokens.length === 0) return true; // Agar search box khali hai toh sab dikhao
+    const rowAddressLower = (r.attending || '').trim().toLowerCase();
     
-    const combinedTargetText = `${r.name || ''} ${r.attending || ''}`.toLowerCase();
+    // 1. Checkbox validation loop layer
+    if (selectedVillages.size > 0 && !selectedVillages.has(rowAddressLower)) {
+      return false;
+    }
     
-    // Check karta hai ki kya SAARE tokens text ke andar match ho rahe hain (AND Condition)
-    return searchTokens.every(token => combinedTargetText.includes(token));
+    // 2. Space separated string tokens validation layer
+    if (searchTokens.length > 0) {
+      const combinedTargetText = `${r.name || ''} ${r.attending || ''}`.toLowerCase();
+      return searchTokens.every(token => combinedTargetText.includes(token));
+    }
+    
+    return true;
   });
 
   const totalMasterGuests = currentData.reduce((sum, r) => sum + (parseInt(r.guests) || 1), 0);
@@ -112,8 +159,7 @@ function applySortAndRender() {
     tbody.appendChild(tr);
   });
   
-  // Dynamic Counter Status Layout[cite: 7]
-  if (searchTokens.length > 0) {
+  if (searchTokens.length > 0 || selectedVillages.size > 0) {
     setStatus(`Filtered: ${filteredData.length} of ${currentData.length} Entries | Selected Guests: ${totalFilteredGuests}👥 (Total Database Guests: ${totalMasterGuests}👥)`);
   } else {
     setStatus(`Loaded ${currentData.length} of ${currentData.length} Entries | Total Guests: ${totalMasterGuests}👥`);
@@ -198,6 +244,14 @@ document.getElementById('cancelEditBtn').addEventListener('click', () => {
   applySortAndRender();
 });
 
+// Master Reset Action for checkboxes triggers array clearing
+document.getElementById('clearVillageSelection').addEventListener('click', () => {
+  selectedVillages.clear();
+  const checkboxes = document.querySelectorAll('#villageFilterGrid input[type="checkbox"]');
+  checkboxes.forEach(cb => cb.checked = false);
+  applySortAndRender();
+});
+
 document.getElementById('savePw').addEventListener('click', ()=>{
   const v = document.getElementById('adminPw').value || '';
   sessionStorage.setItem('adminPw', v);
@@ -253,6 +307,12 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
         totalPdfGuestsCount += parseInt(row.children[2].textContent) || 1;
     });
     
+    // Create smart localized string representing active chune huye villages context configuration
+    let activeGaoText = "All Villages Master List";
+    if (selectedVillages.size > 0) {
+      activeGaoText = "Filtered Villages: " + [...selectedVillages].map(g => g.toUpperCase()).join(', ');
+    }
+
     let printContent = `
         <html>
         <head>
@@ -260,7 +320,7 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
             <style>
                 body { font-family: 'Segoe UI', Arial, sans-serif; margin: 30px; color: #333; }
                 h1 { color: #800020; border-bottom: 2px solid #800020; padding-bottom: 10px; font-size: 24px; text-align: center; margin-bottom: 5px; }
-                p.meta { font-size: 15px; color: #444; margin-bottom: 25px; text-align: center; font-weight: 500; }
+                p.meta { font-size: 14px; color: #444; margin-bottom: 25px; text-align: center; font-weight: 500; line-height: 1.5; }
                 .guest-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
                 .guest-table th, .guest-table td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
                 .guest-table th { background-color: #800020; color: white; font-weight: bold; }
@@ -270,7 +330,7 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
         </head>
         <body>
             <h1>✨ Didi Ki Shaadi - Master Invitation List ✨</h1>
-            <p class="meta">Generated from Admin Panel | Total Card Entries: <strong>${rows.length}</strong> | Total Guests Headcount: <span style="color: #800020; font-size: 16px;"><strong>${totalPdfGuestsCount} 👥</strong></span></p>
+            <p class="meta">Generated from Admin Panel | <strong>Target Map:</strong> ${activeGaoText}<br>Total Card Entries: <strong>${rows.length}</strong> | Total Guests Headcount: <span style="color: #800020; font-size: 15px;"><strong>${totalPdfGuestsCount} 👥</strong></span></p>
             <table class="guest-table">
                 <thead>
                     <tr>
@@ -308,24 +368,6 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
     printWindow.document.write(printContent);
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
-});
-
-document.querySelector('#list tbody').addEventListener('click', async (e)=>{
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  const id = btn.getAttribute('data-id');
-  
-  if (btn.classList.contains('delete')){
-    if (!confirm('Kya aap is entry ko permanently delete karna chahte hain?')) return;
-    try {
-      setStatus('Deleting...');
-      await api('/rsvp/' + id, { method: 'DELETE' }); 
-      await load();
-    } catch(err) {
-      alert('Error deleting data: ' + err.message);
-      setStatus('Error: ' + err.message);
-    }
-  }
 });
 
 load();
