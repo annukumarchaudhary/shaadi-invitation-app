@@ -1,7 +1,7 @@
 let currentData = []; 
 let selectedVillages = new Set(); 
-let editingRowId = null; // Tracks which specific row is currently in targeted inline edit mode
-let activeCardStatusTab = 'all'; // 'all', 'pending', 'delivered'
+let editingRowId = null;
+let activeCardStatusTab = 'all';
 
 async function api(path, opts={}){
   const pw = sessionStorage.getItem('adminPw') || '';
@@ -23,7 +23,7 @@ function setStatus(msg){
 
 async function load(){
   try{
-    editingRowId = null; // Clear edit state on reload triggers
+    editingRowId = null;
     setStatus('Loading...');
     currentData = await api('/rsvps'); 
     
@@ -147,7 +147,6 @@ function applySortAndRender() {
     const tr = document.createElement('tr');
     tr.setAttribute('data-row-id', r.id); 
     
-    const phoneVal = r.message === 'N/A' ? '' : r.message;
     const isGiven = r.cardGiven === true;
 
     if (editingRowId === r.id) {
@@ -168,7 +167,6 @@ function applySortAndRender() {
         <td>
           <select id="edit-guests-${r.id}" class="inline-edit-input">${optionsHtml}</select>
         </td>
-        <td><input type="text" id="edit-phone-${r.id}" class="inline-edit-input" value="${escapeHtml(phoneVal)}"></td>
         <td class="controls">
           <button onclick="saveSingleRow('${r.id}')" class="save-btn">💾 Save</button>
           <button onclick="cancelRowEdit()" class="cancel-btn">❌ Cancel</button>
@@ -185,7 +183,6 @@ function applySortAndRender() {
         <td><strong>${escapeHtml(r.name)}</strong></td>
         <td>${escapeHtml(r.attending)}</td>
         <td><strong>${r.guests || 1}</strong></td>
-        <td>${escapeHtml(r.message || 'N/A')}</td>
         <td class="controls">
           <button onclick="triggerRowEdit('${r.id}')" class="edit-btn">✏️ Edit</button>
           <button onclick="deleteSingleEntry('${r.id}')" class="delete">Delete</button>
@@ -316,7 +313,6 @@ async function saveSingleRow(id) {
   const name = document.getElementById(`edit-name-${id}`).value.trim();
   const address = document.getElementById(`edit-address-${id}`).value.trim();
   const guests = document.getElementById(`edit-guests-${id}`).value;
-  const phone = document.getElementById(`edit-phone-${id}`).value.trim();
   const cardCheckbox = document.getElementById(`edit-card-${id}`);
   const cardGiven = cardCheckbox ? cardCheckbox.checked : false;
   
@@ -333,7 +329,6 @@ async function saveSingleRow(id) {
         name: name,
         attending: address,
         guests: parseInt(guests) || 1,
-        message: phone === '' ? 'N/A' : phone,
         cardGiven: cardGiven
       })
     });
@@ -481,12 +476,11 @@ if (exportAdminPdfBtn) {
             <table class="guest-table">
                 <thead>
                     <tr>
-                        <th style="width: 6%;">S.No</th>
-                        <th style="width: 14%;">Status</th>
-                        <th style="width: 34%;">Guest Name</th>
-                        <th style="width: 28%;">Address / Location</th>
-                        <th style="width: 8%;">Guests</th>
-                        <th style="width: 10%;">Phone</th>
+                        <th style="width: 8%;">S.No</th>
+                        <th style="width: 17%;">Status</th>
+                        <th style="width: 38%;">Guest Name</th>
+                        <th style="width: 27%;">Address / Location</th>
+                        <th style="width: 10%;">Guests</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -501,7 +495,6 @@ if (exportAdminPdfBtn) {
               <td><strong>${row.children[1].textContent}</strong></td>
               <td>${row.children[2].textContent}</td>
               <td><strong>${row.children[3].textContent}</strong></td>
-              <td>${row.children[4].textContent}</td>
           </tr>
       `;
     });
@@ -509,7 +502,7 @@ if (exportAdminPdfBtn) {
     printContent += `
             <tr class="total-row">
                 <td colspan="4" style="text-align: right; padding: 12px;">Grand Total Headcount (👥):</td>
-                <td colspan="2" style="padding: 12px; font-size: 15px;">${totalPdfGuestsCount} People</td>
+                <td style="padding: 12px; font-size: 15px;">${totalPdfGuestsCount} People</td>
             </tr>
         </tbody></table></body></html>
     `;

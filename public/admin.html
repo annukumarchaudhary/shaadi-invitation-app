@@ -69,7 +69,6 @@
       height: 16px;
     }
 
-    /* Card Status Tab Controls */
     .status-filter-bar {
       display: flex;
       gap: 10px;
@@ -146,7 +145,6 @@
     <button id="clearAll">Clear All Entries</button>
   </div>
 
-  <!-- Village Checkbox Filter -->
   <div class="village-filter-card">
     <div style="display: flex; justify-content: space-between; align-items: center;">
       <span style="font-weight: bold; color: #800020; font-size: 15px;">📍 Filter by Village / Address (Chuninda gao ka data dekhein):</span>
@@ -155,7 +153,6 @@
     <div id="villageFilterGrid" class="village-grid"></div>
   </div>
 
-  <!-- Card Distribution Status Filter & Batch Actions Bar -->
   <div class="status-filter-bar">
     <span style="font-weight: bold; color: #800020;">💌 Card Status View:</span>
     <button class="status-tab-btn active" data-filter="all" onclick="setCardStatusFilter('all')">Sabhi (All)</button>
@@ -174,15 +171,13 @@
   
   <div id="status" style="font-weight:bold;margin-bottom:10px;"></div>
   
-  <!-- Sahi Aligned 6 Columns -->
   <table id="list">
     <thead>
       <tr>
-        <th style="width: 14%;">Card Status</th>
-        <th style="width: 26%;">Name</th>
-        <th style="width: 24%;">Address</th>
+        <th style="width: 15%;">Card Status</th>
+        <th style="width: 33%;">Name</th>
+        <th style="width: 30%;">Address</th>
         <th style="width: 10%;">Guests</th>
-        <th style="width: 14%;">Phone Number</th>
         <th style="width: 12%;">Actions</th>
       </tr>
     </thead>
