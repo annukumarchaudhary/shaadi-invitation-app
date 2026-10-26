@@ -20,7 +20,9 @@
     #exportAdminPdf{background:#28a745;}
     #sortDirBtn{background:#007bff;}
     
-    /* ✨ Action specific styling */
+    /* ✨ Naya Entry Button Style */
+    #goToEntryBtn { background-color: #800020; color: white; text-decoration: none; display: inline-flex; align-items: center; }
+    
     .edit-btn { background-color: #007bff; padding: 6px 10px; font-size: 12px; color: white; }
     .save-btn { background-color: #28a745; padding: 6px 10px; font-size: 12px; color: white; }
     .cancel-btn { background-color: #6c757d; padding: 6px 10px; font-size: 12px; color: white; }
@@ -73,6 +75,9 @@
 <body>
   <h1>Admin — Manage Entries</h1>
   <div class="top">
+    <!-- ✨ Direct Home/Entry page par jaane ke liye Button -->
+    <a href="/" style="text-decoration:none;"><button type="button" id="goToEntryBtn">➕ Add New Entry</button></a>
+
     <label>Admin password: <input id="adminPw" type="password" /></label>
     <button id="savePw">Save</button>
     <button id="load">Reload</button>
