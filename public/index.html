@@ -1,135 +1,166 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin — Manage Invitation Entries</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;margin:20px;background-color:#fff9f5;color:#333;}
-    table{border-collapse:collapse;width:100%;margin-top:15px;}
-    th,td{border:1px solid #ddd;padding:10px;text-align:left;}
-    th{background:#800020;color:white;}
-    tr:nth-child(even){background-color: #f9f9f9;}
-    .controls{display:flex;gap:8px;}
-    .top{display:flex;gap:12px;align-items:center;margin-bottom:15px;flex-wrap:wrap;}
-    input[type="password"], input[type="text"], select{padding:8px;border:1px solid #ccc;border-radius:4px;font-size:14px;box-sizing:border-box;}
-    button{padding:8px 14px;background:#333;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-weight:bold;}
-    button:hover{opacity:0.9;}
-    #clearAll{background:#800020;}
-    .delete{background:#d9534f;padding:4px 8px;font-size:12px;}
-    #exportAdminPdf{background:#28a745;}
-    #sortDirBtn{background:#007bff;}
-    
-    #editModeBtn { background-color: #ffc107; color: #333; }
-    #editModeBtn.editing-active { background-color: #28a745; color: white; }
-    #cancelEditBtn { background-color: #6c757d; color: white; display: none; }
-    
-    .inline-edit-input {
-      width: 100%;
-      padding: 6px;
-      border: 1px solid #800020;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    
-    #adminSearchInput { border: 2px solid #800020; background-color: #fff; width: 320px; }
-    #adminSearchInput:focus { outline: none; box-shadow: 0 0 5px rgba(128, 0, 32, 0.4); }
-
-    .village-filter-card {
-      background: #fff;
-      padding: 15px;
-      border: 2px solid #800020;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .village-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 10px;
-      max-height: 150px;
-      overflow-y: auto;
-      padding: 5px;
-      border-top: 1px solid #eee;
-      margin-top: 10px;
-    }
-    .village-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .village-item input {
-      cursor: pointer;
-      accent-color: #800020;
-      width: 16px;
-      height: 16px;
-    }
-
-    /* ✨ Styling for the new single-row phone editor button */
-    .btn-edit-phone {
-      padding: 3px 6px;
-      background: #007bff;
-      color: white;
-      font-size: 11px;
-      border-radius: 3px;
-      margin-left: 8px;
-      font-weight: normal;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Didi Ki Shaadi - Invitation Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .gate-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff9f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .gate-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+            border-top: 5px solid #800020;
+        }
+        .gate-card h2 { color: #800020; margin-bottom: 10px; font-size: 20px; }
+        .gate-card p { font-size: 13px; color: #666; margin-bottom: 20px; }
+        .gate-card input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            text-align: center;
+        }
+        .gate-card button {
+            width: 100%;
+            padding: 10px;
+            background: #800020;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .gate-error { color: #d9534f; font-size: 12px; margin-top: 10px; font-weight: bold; }
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-header {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-logout { background: #6c757d; color: white; }
+        .btn-manage { background: #333; color: white; }
+    </style>
 </head>
 <body>
-  <h1>Admin — Manage Entries</h1>
-  <div class="top">
-    <label>Admin password: <input id="adminPw" type="password" /></label>
-    <button id="savePw">Save</button>
-    <button id="load">Reload</button>
-    
-    <label style="font-weight:bold;margin-left:10px;">Sort By: 
-      <select id="sortBySelect">
-        <option value="name">Name</option>
-        <option value="address">Address</option>
-        <option value="date" selected>Received Date</option>
-      </select>
-    </label>
-    <button id="sortDirBtn" data-dir="desc">Order: Descending (Z-A) ↓</button>
 
-    <div style="display: flex; align-items: center; gap: 6px; margin-left: 10px;">
-      <span style="font-weight: bold;">🔍 Live Find:</span>
-      <input type="text" id="adminSearchInput" placeholder="Try 'advocate mohania' or 'singh bhabhua'...">
+    <!-- Security Login Gate -->
+    <div id="loginGate" class="gate-overlay">
+        <div class="gate-card">
+            <h2>✨ Portal Locked ✨</h2>
+            <p>Kripya aage badhne ke liye password dalein.</p>
+            <input type="password" id="gatePassword" placeholder="Enter Password...">
+            <button id="btnGateLogin">Unlock Portal</button>
+            <div id="gateError" class="gate-error"></div>
+        </div>
     </div>
 
-    <button id="editModeBtn">✏️ Bulk Edit Mode</button>
-    <button id="cancelEditBtn">❌ Cancel</button>
+    <!-- Main Entry Container -->
+    <div id="appContent" class="container" style="display: none;">
+        <div class="app-header">
+            <h1 style="margin: 0; color: #800020; font-size: 24px;">✨ Didi Ki Shaadi - Invitation Tracker ✨</h1>
+            <div class="header-btns">
+                <button id="logoutBtn" class="btn-header btn-logout">🔒 Logout</button>
+                <button id="manageBtn" class="btn-header btn-manage">Manage Panel</button>
+            </div>
+        </div>
 
-    <button id="exportAdminPdf">📄 Export to PDF</button>
-    <button id="clearAll">Clear All Entries</button>
-  </div>
+        <div class="card">
+            <h2>Add New Relative</h2>
+            <form id="relativeForm">
+                <div class="form-group">
+                    <label for="name">Full Name:</label>
+                    <input type="text" id="name" list="nameSuggestions" required autocomplete="off" placeholder="Relative ka naam dalein...">
+                    <datalist id="nameSuggestions"></datalist>
+                </div>
 
-  <div class="village-filter-card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <span style="font-weight: bold; color: #800020; font-size: 15px;">📍 Filter by Village / Address (Chuninda gao ka data dekhein):</span>
-      <button id="clearVillageSelection" style="padding: 4px 10px; background: #6c757d; font-size: 12px;">Reset Selection</button>
+                <div class="form-group">
+                    <label for="address">Address / Location (Village, City, Mohalla):</label>
+                    <input type="text" id="address" list="addressSuggestions" required autocomplete="off" placeholder="Gao ya shehar ka naam...">
+                    <datalist id="addressSuggestions"></datalist>
+                    <div style="margin-top: 5px;">
+                        <input type="checkbox" id="lockAddress">
+                        <label for="lockAddress" style="font-weight: normal; font-size: 0.85rem; color: #800020; cursor: pointer;">
+                            🔒 Lock Address (Agli entry ke liye yahi address rahega)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="guests">Number of Guests (Card Count):</label>
+                    <select id="guests">
+                        <option value="1">1 Person (Default)</option>
+                        <option value="2">2 Persons</option>
+                        <option value="3">3 Persons</option>
+                        <option value="4">4 Persons</option>
+                        <option value="5">5 Persons</option>
+                        <option value="6">6 Persons</option>
+                        <option value="7">7 Persons</option>
+                        <option value="8">8 Persons</option>
+                        <option value="9">9 Persons</option>
+                        <option value="10">10 Persons</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number (Optional):</label>
+                    <input type="text" id="phone" list="phoneSuggestions" autocomplete="off" placeholder="Mobile number...">
+                    <datalist id="phoneSuggestions"></datalist>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" id="submitBtn">Submit Entry</button>
+                    <button type="button" id="clearBtn" class="btn-clear" style="background: #e9ecef; color: #333; border: 1px solid #ccc; padding: 10px 16px; border-radius: 4px; cursor: pointer;">Clear Form</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card search-card">
+            <h2>Quick Search Records</h2>
+            <div class="form-group">
+                <input type="text" id="searchLocation" placeholder="Type name or village to search instantly...">
+            </div>
+            
+            <div id="exportArea" style="margin-bottom: 12px; display: none;">
+                <button type="button" id="exportPdfBtn" style="background-color: #28a745; color: white; padding: 8px 14px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                    📄 Export Filtered to PDF
+                </button>
+            </div>
+
+            <div id="searchResults" class="results-container"></div>
+        </div>
     </div>
-    <div id="villageFilterGrid" class="village-grid"></div>
-  </div>
-  
-  <div id="status" style="font-weight:bold;margin-bottom:10px;"></div>
-  
-  <table id="list">
-    <thead>
-      <tr>
-        <th style="width: 32%;">Name</th>
-        <th style="width: 28%;">Address</th>
-        <th style="width: 12%;">Guests Count</th>
-        <th style="width: 20%;">Phone Number</th>
-        <th style="width: 8%;">Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
 
-  <script src="/admin.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

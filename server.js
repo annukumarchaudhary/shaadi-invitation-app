@@ -1,4 +1,4 @@
-require('dotenv').config(); // ✨ Loaded dotenv engine config safely
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shaadi-app';
 
-// MongoDB Atlas Cloud Connection Setup
+// MongoDB Cloud Connection Setup
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('MongoDB Cloud connected successfully ✅'))
   .catch(err => console.error('MongoDB connection error ❌:', err));
@@ -134,8 +134,7 @@ app.use((req, res) => {
 	res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-mongoose.connection.once('open', () => {
-	app.listen(PORT, () => {
-		console.log(`Server listening on port ${PORT}`);
-	});
+// App ko direct listen karwayein (Mongoose open event ka wait kiye bina)
+app.listen(PORT, () => {
+	console.log(`Server listening on port ${PORT}`);
 });

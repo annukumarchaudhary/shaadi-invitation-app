@@ -357,4 +357,4 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
 });
 
-load();
+// load();
