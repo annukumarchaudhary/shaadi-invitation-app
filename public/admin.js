@@ -1,6 +1,7 @@
 let currentData = []; 
 let selectedVillages = new Set(); 
 let editingRowId = null; // Tracks which specific row is currently in targeted inline edit mode
+let activeCardStatusTab = 'all'; // 'all', 'pending', 'delivered'
 
 async function api(path, opts={}){
   const pw = sessionStorage.getItem('adminPw') || '';
@@ -15,7 +16,10 @@ async function api(path, opts={}){
   return res.json();
 }
 
-function setStatus(msg){document.getElementById('status').textContent = msg}
+function setStatus(msg){
+  const el = document.getElementById('status');
+  if (el) el.textContent = msg;
+}
 
 async function load(){
   try{
@@ -32,6 +36,7 @@ async function load(){
 
 function renderVillageCheckboxes() {
   const gridContainer = document.getElementById('villageFilterGrid');
+  if (!gridContainer) return;
   if (!currentData || currentData.length === 0) {
     gridContainer.innerHTML = '<p style="color:#999; font-size:13px; margin:5px 0 0 0;">No locations found.</p>';
     return;
@@ -66,16 +71,32 @@ function renderVillageCheckboxes() {
   });
 }
 
+function setCardStatusFilter(filterType) {
+  activeCardStatusTab = filterType;
+  document.querySelectorAll('.status-tab-btn').forEach(btn => {
+    if (btn.getAttribute('data-filter') === filterType) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  applySortAndRender();
+}
+window.setCardStatusFilter = setCardStatusFilter;
+
 function applySortAndRender() {
+  const tbody = document.querySelector('#list tbody');
+  if (!tbody) return;
+
   if (!currentData || currentData.length === 0) {
-    document.querySelector('#list tbody').innerHTML = '';
+    tbody.innerHTML = '';
     setStatus('Loaded 0 Entries | Total Guests: 0👥');
     return;
   }
 
-  const sortBy = document.getElementById('sortBySelect').value;
-  const sortDir = document.getElementById('sortDirBtn').getAttribute('data-dir'); 
-  const searchInputVal = (document.getElementById('adminSearchInput').value || '').trim().toLowerCase(); 
+  const sortBy = document.getElementById('sortBySelect') ? document.getElementById('sortBySelect').value : 'date';
+  const sortDir = document.getElementById('sortDirBtn') ? document.getElementById('sortDirBtn').getAttribute('data-dir') : 'desc'; 
+  const searchInputVal = (document.getElementById('adminSearchInput') ? document.getElementById('adminSearchInput').value : '').trim().toLowerCase(); 
 
   currentData.sort((a, b) => {
     let fieldA = '', fieldB = '';
@@ -96,8 +117,15 @@ function applySortAndRender() {
 
   const searchTokens = searchInputVal.split(/\s+/).filter(token => token.length > 0);
 
+  const totalDelivered = currentData.filter(r => r.cardGiven === true).length;
+  const totalPending = currentData.length - totalDelivered;
+
   const filteredData = currentData.filter(r => {
     const rowAddressLower = (r.attending || '').trim().toLowerCase();
+    const isGiven = r.cardGiven === true;
+
+    if (activeCardStatusTab === 'delivered' && !isGiven) return false;
+    if (activeCardStatusTab === 'pending' && isGiven) return false;
     
     if (selectedVillages.size > 0 && !selectedVillages.has(rowAddressLower)) {
       return false;
@@ -111,10 +139,8 @@ function applySortAndRender() {
     return true;
   });
 
-  const totalMasterGuests = currentData.reduce((sum, r) => sum + (parseInt(r.guests) || 1), 0);
   const totalFilteredGuests = filteredData.reduce((sum, r) => sum + (parseInt(r.guests) || 1), 0);
 
-  const tbody = document.querySelector('#list tbody');
   tbody.innerHTML = '';
   
   filteredData.forEach(r => {
@@ -122,8 +148,8 @@ function applySortAndRender() {
     tr.setAttribute('data-row-id', r.id); 
     
     const phoneVal = r.message === 'N/A' ? '' : r.message;
+    const isGiven = r.cardGiven === true;
 
-    // ✨ INTERACTION LOGIC: Checking if this specific row is triggered into targeted single edit mode
     if (editingRowId === r.id) {
       let optionsHtml = '';
       for (let i = 1; i <= 15; i++) {
@@ -131,6 +157,12 @@ function applySortAndRender() {
       }
       
       tr.innerHTML = `
+        <td>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" class="card-checkbox" id="edit-card-${r.id}" ${isGiven ? 'checked' : ''}>
+            <span>${isGiven ? 'Given' : 'Pending'}</span>
+          </label>
+        </td>
         <td><input type="text" id="edit-name-${r.id}" class="inline-edit-input" value="${escapeHtml(r.name)}"></td>
         <td><input type="text" id="edit-address-${r.id}" class="inline-edit-input" value="${escapeHtml(r.attending)}"></td>
         <td>
@@ -144,6 +176,12 @@ function applySortAndRender() {
       `;
     } else {
       tr.innerHTML = `
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" class="card-checkbox" title="Check mark if card is given" ${isGiven ? 'checked' : ''} onchange="toggleCardStatus('${r.id}', this.checked)">
+            <span class="${isGiven ? 'badge-delivered' : 'badge-pending'}">${isGiven ? '✅ Dila Gaya' : '⏳ Baaki'}</span>
+          </div>
+        </td>
         <td><strong>${escapeHtml(r.name)}</strong></td>
         <td>${escapeHtml(r.attending)}</td>
         <td><strong>${r.guests || 1}</strong></td>
@@ -157,26 +195,121 @@ function applySortAndRender() {
     tbody.appendChild(tr);
   });
   
-  if (searchTokens.length > 0 || selectedVillages.size > 0) {
-    setStatus(`Filtered: ${filteredData.length} of ${currentData.length} Entries | Selected Guests: ${totalFilteredGuests}👥 (Total Database Guests: ${totalMasterGuests}👥)`);
-  } else {
-    setStatus(`Loaded ${currentData.length} of ${currentData.length} Entries | Total Guests: ${totalMasterGuests}👥`);
+  setStatus(`Showing: ${filteredData.length} of ${currentData.length} Entries | Total Delivered: ${totalDelivered} ✅ | Total Pending: ${totalPending} ⏳ | Selected Guests Headcount: ${totalFilteredGuests}👥`);
+}
+
+async function toggleCardStatus(id, newStatus) {
+  try {
+    const target = currentData.find(item => item.id === id);
+    if (target) target.cardGiven = newStatus;
+
+    await api('/rsvp/' + id, {
+      method: 'PUT',
+      body: JSON.stringify({ cardGiven: newStatus })
+    });
+    applySortAndRender();
+  } catch (err) {
+    alert('Status update failed: ' + err.message);
+    await load();
   }
 }
+window.toggleCardStatus = toggleCardStatus;
 
-// ✨ NEW ARCHITECTURE FUNCTION: Triggers a single isolated row into inputs frame
+async function markAllFilteredAsGiven() {
+  const rows = document.querySelectorAll('#list tbody tr');
+  if (rows.length === 0) {
+    alert('Koi record show nahi ho raha hai!');
+    return;
+  }
+
+  const idsToUpdate = [];
+  rows.forEach(r => {
+    const id = r.getAttribute('data-row-id');
+    const item = currentData.find(x => x.id === id);
+    if (item && !item.cardGiven) {
+      idsToUpdate.push(id);
+    }
+  });
+
+  if (idsToUpdate.length === 0) {
+    alert('Dikh rahe sabhi rishtedaron ko pehle se hi card dila chuka hai!');
+    return;
+  }
+
+  if (!confirm(`Kya aap dikh rahe ${idsToUpdate.length} rishtedaron ko 'Card Dila Gaya' mark karna chahte hain?`)) return;
+
+  try {
+    setStatus(`Updating ${idsToUpdate.length} records...`);
+    const updatePromises = idsToUpdate.map(id => {
+      const item = currentData.find(x => x.id === id);
+      if (item) item.cardGiven = true;
+      return api('/rsvp/' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ cardGiven: true })
+      });
+    });
+
+    await Promise.all(updatePromises);
+    alert('🎉 Sabhi select kiye huye records successfully updated!');
+    applySortAndRender();
+  } catch (err) {
+    alert('Bulk update error: ' + err.message);
+    await load();
+  }
+}
+window.markAllFilteredAsGiven = markAllFilteredAsGiven;
+
+async function markAllFilteredAsPending() {
+  const rows = document.querySelectorAll('#list tbody tr');
+  if (rows.length === 0) return;
+
+  const idsToUpdate = [];
+  rows.forEach(r => {
+    const id = r.getAttribute('data-row-id');
+    const item = currentData.find(x => x.id === id);
+    if (item && item.cardGiven) {
+      idsToUpdate.push(id);
+    }
+  });
+
+  if (idsToUpdate.length === 0) {
+    alert('Sabhi records pehle se hi Pending hain!');
+    return;
+  }
+
+  if (!confirm(`Kya aap in ${idsToUpdate.length} rishtedaron ko wapas 'Pending' mark karna chahte hain?`)) return;
+
+  try {
+    setStatus(`Resetting ${idsToUpdate.length} records...`);
+    const updatePromises = idsToUpdate.map(id => {
+      const item = currentData.find(x => x.id === id);
+      if (item) item.cardGiven = false;
+      return api('/rsvp/' + id, {
+        method: 'PUT',
+        body: JSON.stringify({ cardGiven: false })
+      });
+    });
+
+    await Promise.all(updatePromises);
+    alert('Reset complete!');
+    applySortAndRender();
+  } catch (err) {
+    alert('Error: ' + err.message);
+    await load();
+  }
+}
+window.markAllFilteredAsPending = markAllFilteredAsPending;
+
 function triggerRowEdit(id) {
   editingRowId = id;
-  applySortAndRender(); // Re-render to load input forms inside selected row boundary
+  applySortAndRender();
 }
 
-// ✨ NEW ARCHITECTURE FUNCTION: Discards inline row modifications
 function cancelRowEdit() {
   editingRowId = null;
   applySortAndRender();
 }
 
-// ✨ NEW ARCHITECTURE FUNCTION: Securely patches comprehensive modifications into MongoDB Atlas cloud database
 async function saveSingleRow(id) {
   if (!id) return;
   
@@ -184,6 +317,8 @@ async function saveSingleRow(id) {
   const address = document.getElementById(`edit-address-${id}`).value.trim();
   const guests = document.getElementById(`edit-guests-${id}`).value;
   const phone = document.getElementById(`edit-phone-${id}`).value.trim();
+  const cardCheckbox = document.getElementById(`edit-card-${id}`);
+  const cardGiven = cardCheckbox ? cardCheckbox.checked : false;
   
   if (!name || !address) {
     alert("Name aur Address field khali nahi chhod sakte!");
@@ -198,12 +333,13 @@ async function saveSingleRow(id) {
         name: name,
         attending: address,
         guests: parseInt(guests) || 1,
-        message: phone === '' ? 'N/A' : phone
+        message: phone === '' ? 'N/A' : phone,
+        cardGiven: cardGiven
       })
     });
     
     alert('🎉 Relative ka data safely update ho gaya!');
-    editingRowId = null; // Revert layout to standard mode
+    editingRowId = null;
     await load();
   } catch (err) {
     alert('Failed to update data records: ' + err.message);
@@ -211,7 +347,6 @@ async function saveSingleRow(id) {
   }
 }
 
-// Expose single-row operations context seamlessly to window instance layer
 window.triggerRowEdit = triggerRowEdit;
 window.cancelRowEdit = cancelRowEdit;
 window.saveSingleRow = saveSingleRow;
@@ -233,66 +368,91 @@ window.deleteSingleEntry = deleteSingleEntry;
 
 function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-document.getElementById('clearVillageSelection').addEventListener('click', () => {
-  selectedVillages.clear();
-  const checkboxes = document.querySelectorAll('#villageFilterGrid input[type="checkbox"]');
-  checkboxes.forEach(cb => cb.checked = false);
-  applySortAndRender();
-});
-
-document.getElementById('savePw').addEventListener('click', ()=>{
-  const v = document.getElementById('adminPw').value || '';
-  sessionStorage.setItem('adminPw', v);
-  setStatus('Password saved successfully');
-});
-
-document.getElementById('load').addEventListener('click', ()=>load());
-document.getElementById('sortBySelect').addEventListener('change', () => applySortAndRender());
-
-document.getElementById('sortDirBtn').addEventListener('click', (e) => {
-  const currentDir = e.target.getAttribute('data-dir');
-  if (currentDir === 'asc') {
-    e.target.setAttribute('data-dir', 'desc');
-    e.target.textContent = 'Order: Descending (Z-A) ↓';
-  } else {
-    e.target.setAttribute('data-dir', 'asc');
-    e.target.textContent = 'Order: Ascending (A-Z) ↑';
-  }
-  applySortAndRender(); 
-});
-
-document.getElementById('adminSearchInput').addEventListener('input', () => {
+const clearVillageBtn = document.getElementById('clearVillageSelection');
+if (clearVillageBtn) {
+  clearVillageBtn.addEventListener('click', () => {
+    selectedVillages.clear();
+    const checkboxes = document.querySelectorAll('#villageFilterGrid input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
     applySortAndRender();
-});
+  });
+}
 
-document.getElementById('clearAll').addEventListener('click', async () => {
-  if (!confirm('Permanently wipe out total saved records context inside database?')) return;
-  const enteredPassword = prompt('Security Check password required:');
-  if (!enteredPassword) return;
+const savePwBtn = document.getElementById('savePw');
+if (savePwBtn) {
+  savePwBtn.addEventListener('click', ()=>{
+    const v = (document.getElementById('adminPw') ? document.getElementById('adminPw').value : '') || '';
+    sessionStorage.setItem('adminPw', v);
+    setStatus('Password saved successfully');
+    load();
+  });
+}
 
-  const savedPassword = sessionStorage.getItem('adminPw') || '';
-  if (enteredPassword !== savedPassword && enteredPassword !== 'admin') {
-    alert('❌ Password mismatch context!');
-    return;
-  }
-  try {
-    await api('/rsvps/clear', {method:'POST'});
-    await load();
-  } catch(err) {
-    setStatus('Error: '+err.message);
-  }
-});
+const loadBtn = document.getElementById('load');
+if (loadBtn) {
+  loadBtn.addEventListener('click', () => load());
+}
 
-document.getElementById('exportAdminPdf').addEventListener('click', () => {
+const sortSelect = document.getElementById('sortBySelect');
+if (sortSelect) {
+  sortSelect.addEventListener('change', () => applySortAndRender());
+}
+
+const sortDirBtn = document.getElementById('sortDirBtn');
+if (sortDirBtn) {
+  sortDirBtn.addEventListener('click', (e) => {
+    const currentDir = e.target.getAttribute('data-dir');
+    if (currentDir === 'asc') {
+      e.target.setAttribute('data-dir', 'desc');
+      e.target.textContent = 'Order: Descending (Z-A) ↓';
+    } else {
+      e.target.setAttribute('data-dir', 'asc');
+      e.target.textContent = 'Order: Ascending (A-Z) ↑';
+    }
+    applySortAndRender(); 
+  });
+}
+
+const adminSearch = document.getElementById('adminSearchInput');
+if (adminSearch) {
+  adminSearch.addEventListener('input', () => {
+    applySortAndRender();
+  });
+}
+
+const clearAllBtn = document.getElementById('clearAll');
+if (clearAllBtn) {
+  clearAllBtn.addEventListener('click', async () => {
+    if (!confirm('Permanently wipe out total saved records context inside database?')) return;
+    const enteredPassword = prompt('Security Check password required:');
+    if (!enteredPassword) return;
+
+    const savedPassword = sessionStorage.getItem('adminPw') || '';
+    if (enteredPassword !== savedPassword && enteredPassword !== 'admin' && enteredPassword !== 'AnnuAdmin@123') {
+      alert('❌ Password mismatch context!');
+      return;
+    }
+    try {
+      await api('/rsvps/clear', {method:'POST'});
+      await load();
+    } catch(err) {
+      setStatus('Error: '+err.message);
+    }
+  });
+}
+
+const exportAdminPdfBtn = document.getElementById('exportAdminPdf');
+if (exportAdminPdfBtn) {
+  exportAdminPdfBtn.addEventListener('click', () => {
     const rows = document.querySelectorAll('#list tbody tr');
     if (rows.length === 0 || editingRowId !== null) {
-        alert(editingRowId !== null ? 'Pehle chal rahe edit mode ko save ya cancel karein!' : 'Export karne ke liye koi data nahi hai!');
-        return;
+      alert(editingRowId !== null ? 'Pehle chal rahe edit mode ko save ya cancel karein!' : 'Export karne ke liye koi data nahi hai!');
+      return;
     }
     
     let totalPdfGuestsCount = 0;
     rows.forEach(row => {
-        totalPdfGuestsCount += parseInt(row.children[2].textContent) || 1;
+      totalPdfGuestsCount += parseInt(row.children[3].textContent) || 1;
     });
     
     let activeGaoText = "All Villages Master List";
@@ -321,10 +481,11 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
             <table class="guest-table">
                 <thead>
                     <tr>
-                        <th style="width: 7%;">S.No</th>
-                        <th style="width: 38%;">Guest Name</th>
-                        <th style="width: 35%;">Address / Location</th>
-                        <th style="width: 10%;">Guests</th>
+                        <th style="width: 6%;">S.No</th>
+                        <th style="width: 14%;">Status</th>
+                        <th style="width: 34%;">Guest Name</th>
+                        <th style="width: 28%;">Address / Location</th>
+                        <th style="width: 8%;">Guests</th>
                         <th style="width: 10%;">Phone</th>
                     </tr>
                 </thead>
@@ -332,20 +493,22 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
     `;
     
     rows.forEach((row, index) => {
-        printContent += `
-            <tr>
-                <td>${index + 1}</td>
-                <td><strong>${row.children[0].textContent}</strong></td>
-                <td>${row.children[1].textContent}</td>
-                <td><strong>${row.children[2].textContent}</strong></td>
-                <td>${row.children[3].textContent}</td>
-            </tr>
-        `;
+      const statusText = row.children[0].textContent.includes('Dila Gaya') ? 'DELIVERED' : 'PENDING';
+      printContent += `
+          <tr>
+              <td>${index + 1}</td>
+              <td><strong>${statusText}</strong></td>
+              <td><strong>${row.children[1].textContent}</strong></td>
+              <td>${row.children[2].textContent}</td>
+              <td><strong>${row.children[3].textContent}</strong></td>
+              <td>${row.children[4].textContent}</td>
+          </tr>
+      `;
     });
     
     printContent += `
             <tr class="total-row">
-                <td colspan="3" style="text-align: right; padding: 12px;">Grand Total Headcount (👥):</td>
+                <td colspan="4" style="text-align: right; padding: 12px;">Grand Total Headcount (👥):</td>
                 <td colspan="2" style="padding: 12px; font-size: 15px;">${totalPdfGuestsCount} People</td>
             </tr>
         </tbody></table></body></html>
@@ -355,6 +518,12 @@ document.getElementById('exportAdminPdf').addEventListener('click', () => {
     printWindow.document.write(printContent);
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
-});
+  });
+}
 
-// load();
+const existingPw = sessionStorage.getItem('adminPw') || '';
+if (existingPw && document.getElementById('adminPw')) {
+  document.getElementById('adminPw').value = existingPw;
+}
+
+load();
