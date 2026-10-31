@@ -436,6 +436,7 @@ if (clearAllBtn) {
   });
 }
 
+// 1. Relatives List Export to PDF
 const exportAdminPdfBtn = document.getElementById('exportAdminPdf');
 if (exportAdminPdfBtn) {
   exportAdminPdfBtn.addEventListener('click', () => {
@@ -507,6 +508,111 @@ if (exportAdminPdfBtn) {
         </tbody></table></body></html>
     `;
     
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+  });
+}
+
+// ✨ 2. NAYA: Complete Villages List Serial-wise Export to PDF
+const exportVillagesPdfBtn = document.getElementById('exportVillagesPdf');
+if (exportVillagesPdfBtn) {
+  exportVillagesPdfBtn.addEventListener('click', () => {
+    if (!currentData || currentData.length === 0) {
+      alert('Villages calculate karne ke liye database me koi data nahi hai!');
+      return;
+    }
+
+    // Gao wise stats group karein
+    const villageStats = {};
+    currentData.forEach(r => {
+      const vName = (r.attending || '').trim();
+      if (!vName) return;
+      if (!villageStats[vName]) {
+        villageStats[vName] = { cards: 0, guests: 0, delivered: 0 };
+      }
+      villageStats[vName].cards += 1;
+      villageStats[vName].guests += (parseInt(r.guests) || 1);
+      if (r.cardGiven === true) {
+        villageStats[vName].delivered += 1;
+      }
+    });
+
+    const sortedVillages = Object.keys(villageStats).sort((a, b) => 
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+
+    const totalVillagesCount = sortedVillages.length;
+    let totalAllCards = 0;
+    let totalAllGuests = 0;
+
+    let rowsHtml = '';
+    sortedVillages.forEach((village, index) => {
+      const data = villageStats[village];
+      totalAllCards += data.cards;
+      totalAllGuests += data.guests;
+
+      rowsHtml += `
+        <tr>
+          <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+          <td><strong>${escapeHtml(village)}</strong></td>
+          <td style="text-align: center;">${data.cards} Cards</td>
+          <td style="text-align: center;">${data.delivered} / ${data.cards}</td>
+          <td style="text-align: center;"><strong>${data.guests} 👥</strong></td>
+        </tr>
+      `;
+    });
+
+    let printContent = `
+      <html>
+      <head>
+          <title>Master Villages List</title>
+          <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; margin: 30px; color: #333; }
+              h1 { color: #800020; border-bottom: 2px solid #800020; padding-bottom: 10px; font-size: 24px; text-align: center; margin-bottom: 5px; }
+              .meta-box { background: #fff9f5; border: 1px solid #e0b0b8; border-radius: 6px; padding: 12px; text-align: center; margin-bottom: 20px; }
+              .meta-box p { margin: 4px 0; font-size: 14px; }
+              .village-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+              .village-table th, .village-table td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
+              .village-table th { background-color: #800020; color: white; font-weight: bold; }
+              .village-table tr:nth-child(even) { background-color: #f9f9f9; }
+              .total-row { font-weight: bold; background-color: #eee !important; color: #800020; font-size: 14px; }
+          </style>
+      </head>
+      <body>
+          <h1>✨ Didi Ki Shaadi - Master Villages / Locations List ✨</h1>
+          <div class="meta-box">
+              <p style="font-size: 16px; color: #800020; font-weight: bold;">
+                Total Villages / Locations: ${totalVillagesCount}
+              </p>
+              <p>Total Invitation Cards: <strong>${totalAllCards}</strong> | Total Guest Headcount: <strong>${totalAllGuests} 👥</strong></p>
+          </div>
+          <table class="village-table">
+              <thead>
+                  <tr>
+                      <th style="width: 8%; text-align: center;">S.No</th>
+                      <th style="width: 44%;">Village / Location Name (A-Z)</th>
+                      <th style="width: 16%; text-align: center;">Total Cards</th>
+                      <th style="width: 16%; text-align: center;">Delivered</th>
+                      <th style="width: 16%; text-align: center;">Total Guests</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  ${rowsHtml}
+                  <tr class="total-row">
+                      <td style="text-align: center;">Total</td>
+                      <td>Grand Total (${totalVillagesCount} Villages)</td>
+                      <td style="text-align: center;">${totalAllCards} Cards</td>
+                      <td style="text-align: center;">-</td>
+                      <td style="text-align: center;">${totalAllGuests} 👥</td>
+                  </tr>
+              </tbody>
+          </table>
+      </body>
+      </html>
+    `;
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
